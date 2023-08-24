@@ -1,0 +1,30 @@
+[tool.poetry]
+name = "clone_client_env"
+version = "0.0.1"
+description = "Wrapper for clone_client client library"
+authors = ["Clone Inc."]
+readme = "README.md"
+
+[[tool.poetry.source]]
+name = "PyPi"
+priority = "primary"
+
+[[tool.poetry.source]]
+name = "piwheels"
+url = "https://www.piwheels.org/simple/"
+priority = "supplemental"
+
+[[tool.poetry.source]]
+name = "clone-pypi"
+url = "https://pypi.pkg.jetbrains.space/clonerobotics/p/main/python/simple"
+priority = "supplemental"
+
+[tool.poetry.dependencies]
+python = "~3.9"
+clone-client = {git="https://github.com/clonerobotics/clone_client", tag="0.0.1"}
+numpy = "^1.24.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
