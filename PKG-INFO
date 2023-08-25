@@ -1,13 +1,13 @@
 Metadata-Version: 2.1
 Name: clone-client-env
-Version: 0.0.1
+Version: 0.0.2
 Summary: Wrapper for clone_client client library
 Author: Clone Inc.
 Requires-Python: >=3.9,<3.10
 Classifier: Programming Language :: Python :: 3
 Classifier: Programming Language :: Python :: 3.9
-Requires-Dist: clone-client @ git+https://github.com/clonerobotics/clone_client@0.0.1
-Requires-Dist: numpy (>=1.24.3,<2.0.0)
+Requires-Dist: clone-client @ git+https://github.com/clonerobotics/clone_client@0.0.2
+Requires-Dist: numpy (>=1.25.2,<2.0.0)
 Description-Content-Type: text/markdown
 
 # Clone Client Env
