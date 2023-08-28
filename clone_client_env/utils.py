@@ -28,5 +28,5 @@ def client_connection(hostname) -> Iterator[tuple[asyncio.AbstractEventLoop, Cli
     yield (loop, client)
 
     loop.run_until_complete(
-        client.__aexit__(None, None, None)
-    )  # pylint: disable=unnecessary-dunder-call
+        client.__aexit__(None, None, None)  # pylint: disable=unnecessary-dunder-call
+    )

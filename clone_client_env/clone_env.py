@@ -12,6 +12,7 @@ from clone_client_env.utils import client_connection
 CLIENT_TIMEOUT = 0.0045  # 4.5ms
 FULL_LOOSE_TIME = 0.5  # 500ms
 
+
 class CloneEnvError(Exception):
     pass
 
@@ -81,14 +82,16 @@ class CloneEnv:
             err, trace = self._comm_worker.exception
             self.force_close()
             raise CloneEnvError(trace) from err
-        
-    def _apply_hand_info(self) -> None:
-        with client_connection(self._hostname) as (_, client):
+
+    def _start_client(self) -> None:
+        with client_connection(self._hostname) as (loop, client):
             self.no_actions = client.number_of_muscles
+            loop.run_until_complete(client.start_compressor())
+            loop.run_until_complete(client.wait_for_desired_pressure())
 
     def connect(self) -> None:
         """Connects to the robot"""
-        self._apply_hand_info()
+        self._start_client()
 
         self._comm_worker.start()
         self._ctrl_worker.start()
@@ -108,16 +111,23 @@ class CloneEnv:
         """Loose all muscles"""
         all_loose = numpy.zeros(self.no_actions) - 1
         self.keep_step(all_loose, period)
-       
+
     def close(self) -> None:
         """Close connection and cleanly exit the robot"""
         if not self._is_connected():
-            raise CloneEnvError("Cannot close connection before connecting to the robot.")
+            raise CloneEnvError(
+                "Cannot close connection before connecting to the robot."
+            )
 
         self.reset()
+        with client_connection(self._hostname) as (loop, client):
+            loop.run_until_complete(client.stop_compressor())
+
         self.force_close()
 
-    def reset(self, actions: Optional[Iterable[float]] = None, period: float = FULL_LOOSE_TIME) -> None:
+    def reset(
+        self, actions: Optional[Iterable[float]] = None, period: float = FULL_LOOSE_TIME
+    ) -> None:
         """
         Resets everything (errors/ hardware errors/ warning) and brings back the hand to a neutral position,
         and resets the system back to normal. It blocks the execution on `period` seconds.

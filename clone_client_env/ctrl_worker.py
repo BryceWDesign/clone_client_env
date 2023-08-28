@@ -12,6 +12,7 @@ from clone_client_env.worker import Worker
 
 class CtrlWorker(Worker):
     """Worker that sends muscle actions to the server."""
+
     def __init__(
         self,
         hostname: str,

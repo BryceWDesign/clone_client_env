@@ -12,6 +12,7 @@ from clone_client_env.worker import Worker
 
 class CommWorker(Worker):
     """Worker that sreads telemetry data from the server."""
+
     def __init__(
         self,
         hostname: str,
