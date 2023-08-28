@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: clone-client-env
-Version: 0.0.2
+Version: 0.0.3
 Summary: Wrapper for clone_client client library
 Author: Clone Inc.
 Requires-Python: >=3.9,<3.10

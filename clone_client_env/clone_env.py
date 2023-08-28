@@ -1,4 +1,5 @@
-from typing import Iterable
+import time
+from typing import Iterable, Optional
 import logging
 
 import numpy
@@ -9,7 +10,7 @@ import multiprocessing as mp
 from clone_client_env.utils import client_connection
 
 CLIENT_TIMEOUT = 0.0045  # 4.5ms
-
+FULL_LOOSE_TIME = 0.5  # 500ms
 
 class CloneEnvError(Exception):
     pass
@@ -97,22 +98,36 @@ class CloneEnv:
         self._comm_worker.terminate()
         self._ctrl_worker.terminate()
 
+    def keep_step(self, actions: Iterable[float], period: float) -> None:
+        """Keep sending the same values over `period` seconds"""
+        start = time.time()
+        while time.time() - start < period:
+            self.step(actions)
+
+    def loose_all(self, period: float = FULL_LOOSE_TIME) -> None:
+        """Loose all muscles"""
+        all_loose = numpy.zeros(self.no_actions) - 1
+        self.keep_step(all_loose, period)
+       
     def close(self) -> None:
         """Close connection and cleanly exit the robot"""
         if not self._is_connected():
             raise CloneEnvError("Cannot close connection before connecting to the robot.")
 
-        all_loose = numpy.zeros(self.no_actions) - 1
-        self.reset(all_loose)
-
+        self.reset()
         self.force_close()
 
-    def reset(self, actions: Iterable[float]) -> None:
+    def reset(self, actions: Optional[Iterable[float]] = None, period: float = FULL_LOOSE_TIME) -> None:
         """
         Resets everything (errors/ hardware errors/ warning) and brings back the hand to a neutral position,
-        and resets the system back to normal.
-        """
-        with self._obs_lock:
-            self._current_obs[:] = numpy.zeros(self.no_actions)
+        and resets the system back to normal. It blocks the execution on `period` seconds.
 
-        self.step(actions)
+        By default reset means loose all muscles.
+
+        """
+        if actions is None:
+            self.loose_all()
+        else:
+            self.keep_step(actions, period)
+
+        self.get_obs()

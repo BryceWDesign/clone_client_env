@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "clone_client_env"
-version = "0.0.2"
+version = "0.0.3"
 description = "Wrapper for clone_client client library"
 authors = ["Clone Inc."]
 readme = "README.md"
