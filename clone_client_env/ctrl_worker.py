@@ -16,18 +16,16 @@ class CtrlWorker(Worker):
     def __init__(
         self,
         hostname: str,
-        actions: Iterable[float],
-        lock: mp.Lock,
+        queue: mp.Queue,
         conn: Connection,
         timeout: float,
     ):
         self._hostname = hostname
         self._timeout = timeout
-        self._lock = lock
+        self._queue = queue
         target = self._start_ctrl
-        args = (actions,)
 
-        super().__init__(target=target, args=args)
+        super().__init__(target=target)
         self._conn = conn
 
     async def _set_muscles(
@@ -41,8 +39,8 @@ class CtrlWorker(Worker):
         except (asyncio.TimeoutError, RpcTimeoutError):
             pass
 
-    def _start_ctrl(self, actions: Iterable[float]) -> None:
+    def _start_ctrl(self) -> None:
         with client_connection(self._hostname) as (loop, client):
             while True:
-                with self._lock:
-                    loop.run_until_complete(self._set_muscles(client, actions))
+                actions = self._queue.get()
+                loop.run_until_complete(self._set_muscles(client, actions))

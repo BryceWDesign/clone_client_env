@@ -27,27 +27,36 @@ class CloneEnv:
         logging.basicConfig(level=log_level)
         self.no_actions = 0
         self._hostname = hostname
+        self._timeout = timeout
 
         self._comm_pipe, self._ctrl_pipe = mp.Pipe()
-
+        self._actions_queue = mp.Queue(maxsize=1)
         self._obs_lock = mp.Lock()
-        self._current_obs = mp.Manager().list([0.0] * self.no_actions)
-        self._comm_worker = CommWorker(
-            hostname, self._current_obs, self._obs_lock, self._comm_pipe, timeout
-        )
 
-        self._actions_lock = mp.Lock()
-        self._current_actions = mp.Manager().list([0.0] * self.no_actions)
-        self._ctrl_worker = CtrlWorker(
-            hostname,
-            self._current_actions,
-            self._actions_lock,
-            self._ctrl_pipe,
-            timeout,
-        )
+        self._current_obs = None
+        self._comm_worker = None
+        self._current_actions = None
+        self._ctrl_worker = None
 
-    def _is_connected(self) -> bool:
-        return self._ctrl_worker.is_alive() and self._comm_worker.is_alive()
+    @property
+    def comm_worker(self) -> CommWorker:
+        """Returns the communication worker"""
+        if not self._comm_worker:
+            raise CloneEnvError(
+                "Communication worker is not initialized. Please connect to the robot first."
+            )
+
+        return self._comm_worker
+
+    @property
+    def ctrl_worker(self) -> CtrlWorker:
+        """Returns the control worker"""
+        if not self._ctrl_worker:
+            raise CloneEnvError(
+                "Control worker is not initialized. Please connect to the robot first."
+            )
+
+        return self._ctrl_worker
 
     def get_obs(self) -> Iterable[float]:
         """
@@ -56,8 +65,8 @@ class CloneEnv:
         Each reading is a positive value.
         Maximum value is determined by the pressure in the system.
         """
-        if self._comm_worker.exception:
-            err, trace = self._comm_worker.exception
+        if self.comm_worker.exception:
+            err, trace = self.comm_worker.exception
             self.force_close()
             raise CloneEnvError(trace) from err
 
@@ -75,11 +84,10 @@ class CloneEnv:
 
         Using values in-between does nothing, API is written for future planned compatibility.
         """
-        with self._actions_lock:
-            self._current_actions[:] = actions
+        self._actions_queue.put(actions)
 
-        if self._comm_worker.exception:
-            err, trace = self._comm_worker.exception
+        if self.comm_worker.exception:
+            err, trace = self.comm_worker.exception
             self.force_close()
             raise CloneEnvError(trace) from err
 
@@ -92,14 +100,31 @@ class CloneEnv:
     def connect(self) -> None:
         """Connects to the robot"""
         self._start_client()
+        self._current_obs = mp.Manager().list([0.0] * self.no_actions)
+        self._current_actions = mp.Manager().list([0.0] * self.no_actions)
 
-        self._comm_worker.start()
-        self._ctrl_worker.start()
+        self._comm_worker = CommWorker(
+            self._hostname,
+            self._current_obs,
+            self._obs_lock,
+            self._comm_pipe,
+            self._timeout,
+        )
+
+        self._ctrl_worker = CtrlWorker(
+            self._hostname,
+            self._actions_queue,
+            self._ctrl_pipe,
+            self._timeout,
+        )
+
+        self.comm_worker.start()
+        self.ctrl_worker.start()
 
     def force_close(self) -> None:
         """Force close connection to the robot"""
-        self._comm_worker.terminate()
-        self._ctrl_worker.terminate()
+        self.comm_worker.terminate()
+        self.ctrl_worker.terminate()
 
     def keep_step(self, actions: Iterable[float], period: float) -> None:
         """Keep sending the same values over `period` seconds"""
@@ -114,11 +139,6 @@ class CloneEnv:
 
     def close(self) -> None:
         """Close connection and cleanly exit the robot"""
-        if not self._is_connected():
-            raise CloneEnvError(
-                "Cannot close connection before connecting to the robot."
-            )
-
         self.reset()
         with client_connection(self._hostname) as (loop, client):
             loop.run_until_complete(client.stop_compressor())
