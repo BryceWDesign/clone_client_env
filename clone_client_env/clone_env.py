@@ -94,7 +94,7 @@ class CloneEnv:
     def _start_client(self) -> None:
         with client_connection(self._hostname) as (loop, client):
             self.no_actions = client.number_of_muscles
-            loop.run_until_complete(client.start_compressor())
+            loop.run_until_complete(client.start_pressuregen())
             loop.run_until_complete(client.wait_for_desired_pressure())
 
     def connect(self) -> None:
@@ -141,7 +141,7 @@ class CloneEnv:
         """Close connection and cleanly exit the robot"""
         self.reset()
         with client_connection(self._hostname) as (loop, client):
-            loop.run_until_complete(client.stop_compressor())
+            loop.run_until_complete(client.stop_pressuregen())
 
         self.force_close()
 

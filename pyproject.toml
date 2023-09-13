@@ -1,13 +1,13 @@
 [tool.poetry]
 name = "clone_client_env"
-version = "0.0.5"
+version = "0.0.6"
 description = "Wrapper for clone_client client library"
 authors = ["Clone Inc."]
 readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "~3.9"
-clone-client = {git="https://github.com/clonerobotics/clone_client", tag="0.0.2"}
+clone-client = {git="https://github.com/clonerobotics/clone_client", tag="0.0.3"}
 numpy = "^1.25.2"
 
 [build-system]
